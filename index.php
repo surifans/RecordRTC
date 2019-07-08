@@ -47,42 +47,43 @@
             
 			var record_start=document.getElementById('start');
 			
-			var recordingPlayer = document.getElementById('audio_test');
+			var audio_test = document.getElementById('audio_test');
 			
             
-			var commonConfig = 
+			function start()
 			{
-				onMediaCaptured: function(stream) 
+				
+				var mediaConstraints={audio: true};
+				
+				
+				var successCallback=function(audioStream) 
 				{
-					record_start.stream = stream;
+					alert(111);
+					
+                    audio_test.srcObject = audioStream;
+                    audio_test.play();
+
+					record_start.stream = audioStream;
 					if(record_start.mediaCapturedCallback) 
 					{
 						record_start.mediaCapturedCallback();
 					}
 					
 					record_start.disabled = false;
-				},
-				
-				onMediaCapturingFailed: function(error) 
+					
+					
+					
+					
+                    audioStream.onended = function() {
+                        //config.onMediaStopped();
+                    };
+                };
+				var errorCallback=function(error) 
 				{
-					if(error.name === 'PermissionDeniedError' && !!navigator.mozGetUserMedia) 
-					{
-						InstallTrigger.install({
-							'Foo': {
-								URL: 'https://addons.mozilla.org/en-US/firefox/addon/enable-screen-capturing/',
-								toString: function () {
-									return this.URL;
-								}
-							}
-						});
-					}
-					//commonConfig.onMediaStopped();
-				}
-			};
-			
-			function start()
-			{
-				captureAudio(commonConfig);
+                     console.error(e);
+                };
+				
+                navigator.mediaDevices.getUserMedia(mediaConstraints).then(successCallback).catch(errorCallback);
 
 				record_start.mediaCapturedCallback = function() 
 				{
@@ -115,28 +116,6 @@
 			}
 			
 			
-            function captureAudio(config) 
-			{
-				var mediaConstraints={audio: true};
-				var successCallback=function(audioStream) 
-				{
-                    recordingPlayer.srcObject = audioStream;
-                    recordingPlayer.play();
-
-                    config.onMediaCaptured(audioStream);
-
-                    audioStream.onended = function() {
-                        //config.onMediaStopped();
-                    };
-                };
-				var errorCallback=function(error) 
-				{
-                    config.onMediaCapturingFailed(error);
-                };
-				
-                navigator.mediaDevices.getUserMedia(mediaConstraints).then(successCallback).catch(errorCallback);
-				
-            }
 			
 			function stop_record()
 			{
@@ -144,10 +123,10 @@
 				{
 					
 					record_start.recordRTC.pauseRecording();
-					recordingPlayer.pause();
+					audio_test.pause();
 					document.getElementById("stop_record").value="继续录音";
 				}else{
-					recordingPlayer.play();
+					audio_test.play();
 					record_start.recordRTC.resumeRecording();
 					document.getElementById("stop_record").value="暂停录音";
 				}
@@ -178,12 +157,10 @@
 			}
             
 
-            //var listOfFilesUploaded = [];
-
             function uploadToServer(recordRTC, callback) 
 			{
                 //将音频文件和对应得题目图片保存在同一个文件夹
-				recordingPlayer.pause();
+				audio_test.pause();
 				
 				var blob = recordRTC instanceof Blob ? recordRTC : recordRTC.blob;
                 var fileType = blob.type.split('/')[0] || 'audio';
@@ -196,59 +173,15 @@
                 formData.append(fileType + '-filename', fileName);
                 formData.append(fileType + '-blob', blob);
 
-                callback('Uploading ' + fileType + ' recording to server.');
-
-                makeXMLHttpRequest('save.php', formData, function(progress) 
-				{
-                    if (progress !== 'upload-ended') {
-                        callback(progress);
-                        return;
-                    }
-
-                    //var initialURL = location.href.replace(location.href.split('/').pop(), '') + 'uploads/';
-                    //callback('ended', initialURL + fileName);
-					
-                });
+                
+				
+				var request = new XMLHttpRequest();
+                request.open('POST', 'save.php');
+                request.send(formData);
+				
             }
 
-            function makeXMLHttpRequest(url, data, callback) 
-			{
-                var request = new XMLHttpRequest();
-                request.onreadystatechange = function() {
-                    if (request.readyState == 4 && request.status == 200) {
-                        callback('upload-ended');
-                    }
-                };
 
-                request.upload.onloadstart = function() {
-                    callback('Upload started...');
-                };
-
-                request.upload.onprogress = function(event) {
-                    callback('Upload Progress ' + Math.round(event.loaded / event.total * 100) + "%");
-                };
-
-                request.upload.onload = function() {
-                    callback('progress-about-to-end');
-                };
-
-                request.upload.onload = function() {
-                    callback('progress-ended');
-                };
-
-                request.upload.onerror = function(error) {
-                    callback('Failed to upload to server');
-                    console.error('XMLHttpRequest failed', error);
-                };
-
-                request.upload.onabort = function(error) {
-                    callback('Upload aborted.');
-                    console.error('XMLHttpRequest aborted', error);
-                };
-
-                request.open('POST', url);
-                request.send(data);
-            }
 			
         </script>
 
