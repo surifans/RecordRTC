@@ -47,9 +47,11 @@
             
 			var record_start=document.getElementById('start');
 			
-			var audio_test = document.getElementById('audio_test');
+			var audio = document.getElementById('audio_test');
 			
             
+			var recorder;
+			
 			function start()
 			{
 				
@@ -60,34 +62,10 @@
 				{
 					alert(111);
 					
-                    audio_test.srcObject = audioStream;
-                    audio_test.play();
+                    audio.srcObject = audioStream;
+                    audio.play();
 
-					record_start.stream = audioStream;
-					if(record_start.mediaCapturedCallback) 
-					{
-						record_start.mediaCapturedCallback();
-					}
-					
-					record_start.disabled = false;
-					
-					
-					
-					
-                    audioStream.onended = function() {
-                        //config.onMediaStopped();
-                    };
-                };
-				var errorCallback=function(error) 
-				{
-                     console.error(e);
-                };
-				
-                navigator.mediaDevices.getUserMedia(mediaConstraints).then(successCallback).catch(errorCallback);
-
-				record_start.mediaCapturedCallback = function() 
-				{
-					record_start.recordRTC = RecordRTC(record_start.stream, {
+					record_start.recordRTC = RecordRTC(audioStream, {
 						type: 'audio',
 						bufferSize: 16384,//typeof params.bufferSize == 'undefined' ? 0 : parseInt(params.bufferSize),
 						sampleRate: 44100,//typeof params.sampleRate == 'undefined' ? 44100 : parseInt(params.sampleRate),
@@ -96,37 +74,34 @@
 						recorderType: webrtcDetectedBrowser === 'edge' ? StereoAudioRecorder : null
 					});
 
-					record_start.recordingEndedCallback = function(url) 
-					{
-						var audio = new Audio();
-						audio.src = url;
-						audio.controls = true;
-						
-						if(audio.paused) audio.play();
-
-						audio.onended = function() {
-							audio.pause();
-							audio.src = URL.createObjectURL(record_start.recordRTC.blob);
-						};
-					};
+					
 
 					record_start.recordRTC.startRecording();
-				};
-				//setMediaContainerFormat(['WAV', 'Ogg']);
+					
+                };
+				var errorCallback=function(error) 
+				{
+                    //commonConfig.onMediaCapturingFailed(error);
+                };
+				//alert(111);
+                navigator.mediaDevices.getUserMedia(mediaConstraints).then(successCallback).catch(errorCallback);
+
 			}
 			
 			
 			
 			function stop_record()
 			{
+				
+				//alert(555);
 				if(document.getElementById("stop_record").value=="暂停录音")
 				{
 					
 					record_start.recordRTC.pauseRecording();
-					audio_test.pause();
+					audio.pause();
 					document.getElementById("stop_record").value="继续录音";
 				}else{
-					audio_test.play();
+					audio.play();
 					record_start.recordRTC.resumeRecording();
 					document.getElementById("stop_record").value="暂停录音";
 				}
@@ -135,32 +110,29 @@
 
 			function save()
 			{
-				setTimeout(function() 
-				{
-					record_start.disabled = false;
-					record_start.disableStateWaiting = false;
-				}, 2 * 1000);
 				
 				
 				
 				record_start.recordRTC.stopRecording(function(url) 
 				{
-					//record_start.recordingEndedCallback(url);
-					record_start.stream.stop();
-					record_start.stream = null;
 					
 					alert(888);
 						
-					uploadToServer(record_start.recordRTC, function(){});
+					uploadToServer(record_start.recordRTC);
+					
+					
+					
+					
 					
 				});
 			}
             
 
-            function uploadToServer(recordRTC, callback) 
+
+            function uploadToServer(recordRTC) 
 			{
                 //将音频文件和对应得题目图片保存在同一个文件夹
-				audio_test.pause();
+				audio.pause();
 				
 				var blob = recordRTC instanceof Blob ? recordRTC : recordRTC.blob;
                 var fileType = blob.type.split('/')[0] || 'audio';
@@ -176,11 +148,14 @@
                 
 				
 				var request = new XMLHttpRequest();
+                
                 request.open('POST', 'save.php');
                 request.send(formData);
 				
+				
+				
+				
             }
-
 
 			
         </script>
